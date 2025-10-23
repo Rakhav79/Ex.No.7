@@ -4,25 +4,6 @@
 # Register no.212222070019
 # Aim: To develop a daily based lovable app
 
-
-/*
-Daily Lovable Guide - Single-file React component (default export)
-- Uses Tailwind CSS for styling (no imports in this file)
-- Features:
-  • Daily prompt (deterministic by date, but overridable)
-  • Affirmation, reflection, little challenge
-  • Tone switch (Gentle / Minimal)
-  • Favorites, history (localStorage)
-  • In-browser notification (requests permission; schedules while app is open)
-
-How to use:
-1) Create a React app (Vite or CRA). Install Tailwind and set up as usual.
-2) Put this file as `src/DailyLovableGuide.jsx` and import it in your App.
-3) Start dev server.
-
-Note: This file is intended as a single-file prototype. You can split components into files later.
-*/
-
 import React, { useEffect, useMemo, useState } from "react";
 
 const SAMPLE_PROMPTS = [
