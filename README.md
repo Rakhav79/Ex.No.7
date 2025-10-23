@@ -1,131 +1,374 @@
-# Exno.7-Develop a prompt-based application tailored to their personal needs, fostering creativity and practical problem-solving skills while leveraging the capabilities of large language models.
+# Exno.7-Develop a Daily based lovable app using proper prompt based application
 
-# Date:09-10-2025
+# Date:23-10-2025
 # Register no.212222070019
-# Aim: To develop a prompt-based application using ChatGPT - To demonstrate how to create a prompt-based application to organize daily tasks, showing the progression from simple to more advanced prompt designs and their corresponding outputs.
-
-#AI Tools Required: 
+# Aim: To develop a daily based lovable app
 
 
-# Explanation: 
-Here’s a **complete and well-structured example output** for the project “Personal Productivity Assistant” following your provided procedure and example format.
+/*
+Daily Lovable Guide - Single-file React component (default export)
+- Uses Tailwind CSS for styling (no imports in this file)
+- Features:
+  • Daily prompt (deterministic by date, but overridable)
+  • Affirmation, reflection, little challenge
+  • Tone switch (Gentle / Minimal)
+  • Favorites, history (localStorage)
+  • In-browser notification (requests permission; schedules while app is open)
 
----
+How to use:
+1) Create a React app (Vite or CRA). Install Tailwind and set up as usual.
+2) Put this file as `src/DailyLovableGuide.jsx` and import it in your App.
+3) Start dev server.
 
-## **Personal Productivity Assistant — Design and Simulation**
+Note: This file is intended as a single-file prototype. You can split components into files later.
+*/
 
-### **1. Core Requirements**
+import React, { useEffect, useMemo, useState } from "react";
 
-| Category                        | Description                                                                                            |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Interaction Style**           | Natural language interface for intuitive communication (text-based or voice-enabled).                  |
-| **Core Capabilities**           | Task management, scheduling, wellness suggestions, and general question-answering.                     |
-| **Adaptability**                | Learns from user inputs over time (e.g., adjusts reminder frequency, tone, or wellness tips).          |
-| **Reminders & Notifications**   | Alerts for deadlines, meetings, and personal commitments.                                              |
-| **Feedback Loop**               | Captures user responses (e.g., “completed”, “snooze”, “don’t remind me again”) to improve suggestions. |
-| **Optional Memory Integration** | Stores user preferences like sleep times, work hours, or preferred exercise routines.                  |
+const SAMPLE_PROMPTS = [
+  {
+    id: "self-1",
+    category: "Self-Love",
+    tone: "gentle",
+    title: "A Letter to You",
+    affirmation: "I am worthy of my own care.",
+    reflection: "Write a short, compassionate letter to yourself about one thing you did well this week.",
+    challenge: "Take 5 minutes today to breathe deeply and place a hand over your heart.",
+  },
+  {
+    id: "self-2",
+    category: "Self-Love",
+    tone: "minimal",
+    title: "Tiny Wins",
+    affirmation: "Small steps are progress.",
+    reflection: "List three small things you accomplished recently — no matter how small.",
+    challenge: "Celebrate one of those wins out loud.",
+  },
+  {
+    id: "mind-1",
+    category: "Mindfulness",
+    tone: "gentle",
+    title: "Five Senses Check-in",
+    affirmation: "I am present with the world around me.",
+    reflection: "Name one thing you can see, four things you can feel, three things you can hear, two things you can smell, one thing you can taste.",
+    challenge: "Do this check-in right now, slowly.",
+  },
+  {
+    id: "love-1",
+    category: "Connection",
+    tone: "gentle",
+    title: "Share a Moment",
+    affirmation: "Sharing brings us closer.",
+    reflection: "Who made your day better recently? Tell them why (text, voice note, or in person).",
+    challenge: "Send a short message of appreciation to one person.",
+  },
+  {
+    id: "love-2",
+    category: "Connection",
+    tone: "minimal",
+    title: "Ask and Listen",
+    affirmation: "Curiosity opens the heart.",
+    reflection: "Ask someone a question you’ve never asked them and listen without interrupting.",
+    challenge: "Schedule 15 minutes for a real conversation this week.",
+  },
+];
 
----
+function todaysSeedIndex(total) {
+  // deterministic index for today's date
+  const d = new Date();
+  const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  let sum = 0;
+  for (let i = 0; i < key.length; i++) sum += key.charCodeAt(i);
+  return sum % total;
+}
 
-### **2. Constructing Prompts for Each Function**
+export default function DailyLovableGuide() {
+  const [prompts, setPrompts] = useState(() => {
+    // start with sample prompts; in a real app allow import or cloud sync
+    return SAMPLE_PROMPTS;
+  });
 
-| Feature                     | Example LLM Prompt                                                                              | Expected Behavior                                                                            |
-| --------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| **Daily Task Manager**      | “Add a new task: Submit report by 5 PM tomorrow.” <br> “Show me my pending tasks for today.”    | LLM parses task, stores it with a deadline, and lists tasks on request.                      |
-| **Smart Scheduler**         | “Schedule a meeting with John at 3 PM tomorrow.” <br> “Do I have any free time this afternoon?” | LLM identifies time slots, prevents overlaps, and provides a summary of the schedule.        |
-| **Wellness Tips Generator** | “Give me a quick wellness tip for today.” <br> “I prefer mental health tips over fitness.”      | Suggests adaptive tips like mindfulness breaks or hydration reminders, based on preferences. |
-| **General Queries**         | “What’s the weather today?” <br> “Summarize this article.”                                      | Handles conversational queries outside productivity tasks, acting as a general assistant.    |
-| **Feedback & Adaptation**   | “Don’t remind me about water breaks anymore.” <br> “I’d like more fitness suggestions.”         | Updates stored preferences to modify future suggestions.                                     |
+  const [tone, setTone] = useState(() => {
+    return localStorage.getItem("dlg_tone") || "gentle";
+  });
 
----
+  const [overrideIndex, setOverrideIndex] = useState(() => {
+    const raw = localStorage.getItem("dlg_override");
+    return raw ? Number(raw) : null;
+  });
 
-### **3. Simulation of Natural Interaction (Command-Line Example)**
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("dlg_favs") || "[]");
+    } catch (e) {
+      return [];
+    }
+  });
 
-**User →** *“Remind me to call mom at 6 PM.”*
-**Assistant →** “Got it! I’ll remind you to call mom at 6 PM today.”
+  const [history, setHistory] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("dlg_history") || "[]");
+    } catch (e) {
+      return [];
+    }
+  });
 
-**User →** *“Add ‘Finish report’ to my task list for tomorrow.”*
-**Assistant →** “Task added: ‘Finish report’ due tomorrow. Would you like me to prioritize it?”
+  const [showSettings, setShowSettings] = useState(false);
+  const [notifyAllowed, setNotifyAllowed] = useState(false);
 
-**User →** *“Yes, mark it high priority.”*
-**Assistant →** “Noted. ‘Finish report’ is now marked as high priority.”
+  useEffect(() => {
+    localStorage.setItem("dlg_tone", tone);
+  }, [tone]);
 
-**User →** *“Any wellness tip for today?”*
-**Assistant →** “Take a 5-minute break every hour to stretch your neck and wrists. You’ve been active mostly online today.”
+  useEffect(() => {
+    if (overrideIndex !== null) localStorage.setItem("dlg_override", String(overrideIndex));
+    else localStorage.removeItem("dlg_override");
+  }, [overrideIndex]);
 
-**User →** *“I prefer hydration tips instead.”*
-**Assistant →** “Understood! I’ll focus on hydration reminders from now on.”
+  useEffect(() => {
+    localStorage.setItem("dlg_favs", JSON.stringify(favorites));
+  }, [favorites]);
 
----
+  useEffect(() => {
+    localStorage.setItem("dlg_history", JSON.stringify(history));
+  }, [history]);
 
-### **4. Feedback and Adaptation Process**
+  // compute today's prompt list (filter by tone if set)
+  const filtered = useMemo(() => prompts.filter((p) => !tone || p.tone === tone), [prompts, tone]);
 
-| Step                        | Function                                                                       | Description |
-| --------------------------- | ------------------------------------------------------------------------------ | ----------- |
-| **1. Collect Inputs**       | Monitor user feedback through direct commands (“I don’t like…”, “More of…”).   |             |
-| **2. Update Preferences**   | Store user-specific settings (wellness focus, reminder style, preferred time). |             |
-| **3. Modify Behavior**      | Adjust future responses and tips according to saved data.                      |             |
-| **4. Evaluate Performance** | Track task completion rates, user satisfaction, and engagement levels.         |             |
+  const todayIndex = useMemo(() => {
+    if (overrideIndex !== null && overrideIndex >= 0 && overrideIndex < filtered.length) return overrideIndex;
+    return todaysSeedIndex(filtered.length);
+  }, [filtered, overrideIndex]);
 
----
+  const todayPrompt = filtered[todayIndex];
 
-### **5. (Optional) Memory Integration Example**
+  function toggleFavorite(id) {
+    setFavorites((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  }
 
-| Stored Parameter            | Example Value             | Impact                                  |
-| --------------------------- | ------------------------- | --------------------------------------- |
-| **Preferred reminder time** | 15 minutes before event   | All alerts adjusted accordingly.        |
-| **Wellness focus**          | Hydration and mindfulness | Daily suggestions customized.           |
-| **Work hours**              | 9 AM – 5 PM               | Limits reminders during personal hours. |
-| **Task preference**         | Prioritize “urgent” tasks | Filters and sorts task summaries.       |
+  function markDone(prompt) {
+    const entry = { id: prompt.id, title: prompt.title, date: new Date().toISOString() };
+    setHistory((h) => [entry, ...h].slice(0, 200));
+  }
 
----
+  // Notifications: request permission and schedule a reminder (works while page open)
+  function requestNotificationPermission() {
+    if (!("Notification" in window)) return alert("This browser does not support notifications.");
+    Notification.requestPermission().then((perm) => {
+      setNotifyAllowed(perm === "granted");
+      if (perm === "granted") scheduleDailyNotification();
+    });
+  }
 
-### **6. Example LLM Workflow**
+  function scheduleDailyNotification() {
+    // schedule a simple notification after 10 seconds for demo and then every 24h while open
+    if (!notifyAllowed && Notification.permission !== "granted") return;
+    const fire = () => {
+      new Notification("Daily Lovable Guide", {
+        body: todayPrompt ? `${todayPrompt.title} — ${todayPrompt.affirmation}` : "Your daily prompt is ready.",
+        silent: false,
+      });
+    };
+    // for demo: fire in 10s
+    setTimeout(fire, 10 * 1000);
+    // and schedule a repeating interval while the tab is open
+    setInterval(() => {
+      fire();
+    }, 24 * 60 * 60 * 1000);
+  }
 
-1. **Input Parsing** — Recognize task-related, schedule-related, or wellness-related intent.
-2. **Action Execution** — Perform corresponding action (e.g., add to task list, schedule event).
-3. **Response Generation** — Provide concise and friendly feedback.
-4. **Preference Learning** — Update internal state based on corrections or confirmations.
+  useEffect(() => {
+    setNotifyAllowed(Notification && Notification.permission === "granted");
+  }, []);
 
----
+  // UI small helpers
+  const isFav = (id) => favorites.includes(id);
 
-### **Final Output Summary**
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-rose-50 to-white p-6 flex items-start justify-center">
+      <div className="w-full max-w-2xl">
+        <header className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-extrabold leading-tight">Daily Lovable Guide</h1>
+            <p className="text-sm text-gray-600">Daily prompts, gentle challenges & tiny rituals</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSettings((s) => !s)}
+              className="px-3 py-1 rounded-2xl border shadow-sm text-sm"
+            >
+              Settings
+            </button>
+            <button
+              onClick={requestNotificationPermission}
+              className="px-3 py-1 rounded-2xl bg-rose-500 text-white text-sm shadow"
+            >
+              Notify
+            </button>
+          </div>
+        </header>
 
-**Personal Productivity Assistant Features:**
+        {showSettings && (
+          <div className="bg-white p-4 rounded-2xl shadow mb-6">
+            <h3 className="font-semibold mb-2">Appearance & Tone</h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setTone("gentle")}
+                className={`px-3 py-1 rounded-2xl border ${tone === "gentle" ? "bg-rose-100" : "bg-white"}`}
+              >
+                Gentle
+              </button>
+              <button
+                onClick={() => setTone("minimal")}
+                className={`px-3 py-1 rounded-2xl border ${tone === "minimal" ? "bg-rose-100" : "bg-white"}`}
+              >
+                Minimal
+              </button>
+            </div>
 
-* **Daily Task Manager:**
+            <hr className="my-4" />
 
-  * Accepts tasks via natural language (e.g., “Remind me to call mom at 6 PM”).
-  * Organizes by priority and deadline.
-  * Provides daily summaries and pending items.
+            <h3 className="font-semibold mb-2">Prompt Controls</h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setOverrideIndex((i) => (i === null ? 0 : Math.max(0, (i + 1) % filtered.length)))}
+                className="px-3 py-1 rounded-2xl border"
+              >
+                Next Prompt
+              </button>
+              <button onClick={() => setOverrideIndex(null)} className="px-3 py-1 rounded-2xl border">
+                Use Today's Prompt
+              </button>
+            </div>
 
-* **Smart Scheduler:**
+            <p className="text-xs text-gray-500 mt-3">Notes: Prompts are stored locally. Import/Sync coming soon.</p>
+          </div>
+        )}
 
-  * Schedules events and reminders using contextual understanding.
-  * Detects overlaps and free time slots.
+        <main>
+          <div className="bg-white rounded-3xl p-6 shadow">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-xs text-gray-500">Prompt for</div>
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-2xl font-bold">{todayPrompt ? todayPrompt.title : "No prompt"}</h2>
+                  <span className="text-sm text-gray-500">{todayPrompt ? todayPrompt.category : "—"}</span>
+                </div>
+                <p className="mt-2 text-gray-700">{todayPrompt ? todayPrompt.reflection : ""}</p>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <button
+                  onClick={() => toggleFavorite(todayPrompt.id)}
+                  className="px-3 py-1 rounded-full border"
+                >
+                  {isFav(todayPrompt.id) ? "★" : "☆"}
+                </button>
+                <div className="text-right text-xs text-gray-500">{new Date().toLocaleDateString()}</div>
+              </div>
+            </div>
 
-* **Wellness Tips Generator:**
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl border">
+                <div className="text-xs text-gray-500">Affirmation</div>
+                <div className="mt-2 font-semibold">{todayPrompt ? todayPrompt.affirmation : "—"}</div>
+              </div>
+              <div className="p-4 rounded-xl border">
+                <div className="text-xs text-gray-500">Reflection</div>
+                <div className="mt-2">{todayPrompt ? todayPrompt.reflection : "—"}</div>
+              </div>
+              <div className="p-4 rounded-xl border flex flex-col justify-between">
+                <div>
+                  <div className="text-xs text-gray-500">Challenge</div>
+                  <div className="mt-2">{todayPrompt ? todayPrompt.challenge : "—"}</div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => markDone(todayPrompt)}
+                    className="px-3 py-2 rounded-2xl bg-rose-500 text-white text-sm shadow"
+                  >
+                    Mark done
+                  </button>
+                  <button
+                    onClick={() => navigator.share && navigator.share({ title: todayPrompt.title, text: `${todayPrompt.title} — ${todayPrompt.affirmation}` })}
+                    className="px-3 py-2 rounded-2xl border text-sm"
+                  >
+                    Share
+                  </button>
+                </div>
+              </div>
+            </div>
 
-  * Suggests adaptive daily tips (hydration, mental health, breaks).
-  * Learns user preferences to personalize suggestions.
+            <div className="mt-6">
+              <h3 className="font-semibold">Quick browse</h3>
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {filtered.slice(0, 6).map((p) => (
+                  <div key={p.id} className="p-3 rounded-xl border flex items-start justify-between">
+                    <div>
+                      <div className="font-medium">{p.title}</div>
+                      <div className="text-xs text-gray-500">{p.category}</div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <button onClick={() => toggleFavorite(p.id)} className="px-2 py-1 rounded-full border">
+                        {isFav(p.id) ? "★" : "☆"}
+                      </button>
+                      <button onClick={() => setOverrideIndex(filtered.indexOf(p))} className="px-2 py-1 rounded-2xl border text-xs">
+                        Use
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-* **Learning & Adaptation:**
+            <div className="mt-6">
+              <h3 className="font-semibold">Favorites</h3>
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {favorites.length === 0 && <div className="text-sm text-gray-500">No favorites yet — tap the star to save prompts you love.</div>}
+                {favorites.map((id) => {
+                  const p = prompts.find((x) => x.id === id) || filtered.find((x) => x.id === id);
+                  if (!p) return null;
+                  return (
+                    <div key={id} className="p-3 rounded-xl border flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">{p.title}</div>
+                        <div className="text-xs text-gray-500">{p.category}</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => toggleFavorite(id)} className="px-2 py-1 rounded-2xl border text-xs">
+                          Remove
+                        </button>
+                        <button onClick={() => setOverrideIndex(filtered.indexOf(p))} className="px-2 py-1 rounded-2xl border text-xs">
+                          Use
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-  * Remembers user corrections and adjusts communication tone and focus areas.
-  * Supports incremental updates to behavior and recommendations.
+            <div className="mt-6">
+              <h3 className="font-semibold">History</h3>
+              <div className="mt-3 space-y-2 text-sm text-gray-600">
+                {history.length === 0 && <div className="text-xs text-gray-500">No history yet — mark prompts as done to build your streak.</div>}
+                {history.map((h) => (
+                  <div key={h.date} className="flex items-center justify-between bg-rose-50 p-2 rounded-md">
+                    <div>
+                      <div className="font-medium">{h.title}</div>
+                      <div className="text-xs text-gray-500">{new Date(h.date).toLocaleString()}</div>
+                    </div>
+                    <div className="text-xs text-gray-500">✔</div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
----
+            <footer className="mt-6 text-center text-xs text-gray-400">Made with care — Daily Lovable Guide • Prototype</footer>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
 
-Prompt:
-"Design a personal productivity assistant that can help manage daily tasks, schedule reminders, suggest wellness tips, and answer general queries. The assistant should interact using natural language and be adaptable to the user’s changing preferences over time."
-
-
-
-
-
-# Result: 
-The lab exercise resulted in the creation of a prototype concept for a personal assistant powered by large language models. Students were able to:
- Understand how to tailor LLM prompts to real-life applications.
- Foster creativity by designing features suited to their personal or academic lives.
- Learn prompt engineering techniques for optimal interaction with AI tools.
- Experience the versatility and utility of generative AI in solving everyday problems.
