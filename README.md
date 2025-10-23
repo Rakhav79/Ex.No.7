@@ -5,7 +5,6 @@
 # Aim: To develop a daily based lovable app
 
 
-
 import React, { useEffect, useMemo, useState } from "react";
 
 const SAMPLE_PROMPTS = [
@@ -354,4 +353,9 @@ export default function DailyLovableGuide() {
     </div>
   );
 }
+
+
+
+
+        
 
